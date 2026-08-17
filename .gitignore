@@ -1,0 +1,5 @@
+build/
+sim/obj_dir/
+*.o
+*.a
+*.d
