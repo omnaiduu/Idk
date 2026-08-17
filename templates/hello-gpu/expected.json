@@ -1,0 +1,5 @@
+{
+  "uart_contains": "hello from tiny-gpu",
+  "leds_nonzero": true,
+  "fb_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7"
+}
