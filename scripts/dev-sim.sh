@@ -4,7 +4,7 @@ set -euo pipefail
 # Usage:
 #   dev-sim.sh build <workspace>   — build firmware + sim into workspace/build/
 #   dev-sim.sh run <workspace>     — smoke test in workspace
-#   dev-sim.sh native              — full PASS check from repo root (CI)
+#   dev-sim.sh native              — full PASS check from repo root (CI / Docker)
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 MODE="${1:-native}"
@@ -42,25 +42,58 @@ copy_sim_to_workspace() {
   chmod +x "${ws_build}/sim"
 }
 
-check_pass_repo() {
-  python3 - "${REPO_ROOT}/templates/hello-gpu/expected.json" "${REPO_ROOT}/build/sim-out" <<'PY'
+check_pass() {
+  local expected="$1"
+  local out_dir="$2"
+  python3 - "$expected" "$out_dir" <<'PY'
 import json, hashlib, sys
-exp = json.load(open(sys.argv[1]))
-out = sys.argv[2]
-uart = open(f"{out}/uart.log", "rb").read().decode("utf-8", errors="replace")
-leds = json.load(open(f"{out}/leds.json"))
-fb = open(f"{out}/fb.bin", "rb").read()
-errs = []
+
+expected_path, out_dir = sys.argv[1], sys.argv[2]
+with open(expected_path) as f:
+    exp = json.load(f)
+
+uart = open(f"{out_dir}/uart.log", "rb").read().decode("utf-8", errors="replace")
+leds = json.load(open(f"{out_dir}/leds.json"))
+pwm = json.load(open(f"{out_dir}/pwm.json"))
+fb = open(f"{out_dir}/fb.bin", "rb").read()
+lines = open(f"{out_dir}/last-snapshot.json").read().strip().splitlines()
+snap = json.loads(lines[-1])
+
+errors = []
 if exp.get("uart_contains") and exp["uart_contains"] not in uart:
-    errs.append("uart")
+    errors.append(f"UART missing {exp['uart_contains']!r}")
 if exp.get("leds_nonzero") and not leds.get("leds"):
-    errs.append("leds")
-if exp.get("fb_sha256") and hashlib.sha256(fb).hexdigest() != exp["fb_sha256"]:
-    errs.append("fb_sha256")
-if errs:
-    print("FAIL:", ", ".join(errs)); sys.exit(1)
-print("PASS")
+    errors.append("LEDs are zero at end")
+if exp.get("leds_final") and leds.get("leds") != exp["leds_final"]:
+    errors.append(f"LEDs expected {exp['leds_final']} got {leds.get('leds')}")
+if exp.get("pwm_duty") and pwm.get("duty") != exp["pwm_duty"]:
+    errors.append(f"PWM duty mismatch: {pwm.get('duty')}")
+digest = hashlib.sha256(fb).hexdigest()
+if exp.get("fb_sha256") and digest != exp["fb_sha256"]:
+    errors.append(f"fb_sha256 mismatch: got {digest}")
+if exp.get("halted") and not snap.get("halted"):
+    errors.append("CPU did not halt")
+
+if errors:
+    print("FAIL:")
+    for e in errors:
+        print(" -", e)
+    sys.exit(1)
+
+print("PASS: hello-gpu simulation OK")
 PY
+}
+
+run_native() {
+  mkdir -p "${REPO_ROOT}/build/sim-out" "${REPO_ROOT}/build"
+  MAIN_SRC="${REPO_ROOT}/templates/hello-gpu/main.c"
+  build_firmware "${REPO_ROOT}/build"
+  build_verilator
+  export DUMP_DIR="${REPO_ROOT}/build/sim-out"
+  printf '{"cmd":"reset"}\n{"cmd":"run","cycles":5000000}\n' \
+    | "${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top" "+firmware=${REPO_ROOT}/build/firmware.hex" \
+    > "${REPO_ROOT}/build/sim-out/last-snapshot.json"
+  check_pass "${REPO_ROOT}/templates/hello-gpu/expected.json" "${REPO_ROOT}/build/sim-out"
 }
 
 case "$MODE" in
@@ -80,16 +113,27 @@ case "$MODE" in
       | "${WORKSPACE}/build/sim" "+firmware=${WORKSPACE}/build/firmware.hex"
     ;;
   native)
-    mkdir -p "${REPO_ROOT}/build/sim-out" "${REPO_ROOT}/build"
-    MAIN_SRC="${REPO_ROOT}/templates/hello-gpu/main.c"
-    build_firmware "${REPO_ROOT}/build"
-    build_verilator
-    export DUMP_DIR="${REPO_ROOT}/build/sim-out"
-    printf '{"cmd":"reset"}\n{"cmd":"run","cycles":5000000}\n' \
-      | "${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top" "+firmware=${REPO_ROOT}/build/firmware.hex" \
-      > "${REPO_ROOT}/build/sim-out/last-snapshot.json"
-    check_pass_repo
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 \
+       && [[ "${FORCE_NATIVE:-}" != "1" ]] \
+       && ! command -v verilator >/dev/null 2>&1; then
+      echo "==> Running inside Docker (ubuntu:24.04)..."
+      docker run --rm \
+        -v "$REPO_ROOT:/workspace" \
+        -w /workspace \
+        ubuntu:24.04 \
+        bash -lc '
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq verilator gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf make g++ python3 ca-certificates
+          FORCE_NATIVE=1 ./scripts/dev-sim.sh native
+        '
+    else
+      run_native
+    fi
     ;;
   *)
-    echo "unknown mode: $MODE" >&2; exit 1 ;;
+    echo "unknown mode: $MODE" >&2
+    exit 1
+    ;;
 esac

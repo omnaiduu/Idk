@@ -3,3 +3,6 @@
 /workspace-data/
 *.elf
 *.hex
+*.o
+*.a
+*.d

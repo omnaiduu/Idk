@@ -1,0 +1,2 @@
+# Firmware build flags — must match scripts/dev-sim.sh
+-march=rv32i -mabi=ilp32 -nostdlib -nostartfiles -Tlink.ld -Wl,--gc-sections -Os
