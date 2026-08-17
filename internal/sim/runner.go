@@ -22,7 +22,7 @@ import (
 	"tiny-gpu-bench/internal/workspace"
 )
 
-const defaultRunCycles = 2_000_000
+const defaultRunCycles = 5_000_000
 
 // Waves holds waveform samples from the last simulation.
 type Waves struct {
@@ -105,11 +105,11 @@ func (r *Runner) Simulate(ctx context.Context) (*Result, error) {
 	r.setRunning(true)
 	defer r.setRunning(false)
 
+	r.stopSim()
 	logBuf, err := r.build(ctx)
 	if err != nil {
 		return &Result{Log: logBuf}, err
 	}
-	r.stopSim()
 	if err := r.ensureSim(ctx); err != nil {
 		return &Result{Log: logBuf + err.Error()}, err
 	}

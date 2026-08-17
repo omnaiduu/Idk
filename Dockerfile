@@ -10,7 +10,7 @@ COPY apps/web/ ./
 RUN pnpm build
 
 # Stage 2: build Go server
-FROM golang:1.23-bookworm AS go-build
+FROM golang:1.24-bookworm AS go-build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

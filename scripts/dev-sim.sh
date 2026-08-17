@@ -31,15 +31,35 @@ build_firmware() {
 }
 
 build_verilator() {
+  local sim_bin="${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top"
+  local lock="${REPO_ROOT}/build/.verilator.lock"
+  mkdir -p "${REPO_ROOT}/build"
+  if [[ -x "$sim_bin" ]]; then
+    echo "[dev-sim] verilator binary cached"
+    return 0
+  fi
   echo "[dev-sim] verilator build"
-  make -C "${REPO_ROOT}/sim" sim ROOT="${REPO_ROOT}" MAIN_SRC="${MAIN_SRC}"
+  (
+    flock -x 200
+    if [[ -x "$sim_bin" ]]; then
+      echo "[dev-sim] verilator binary cached (after lock)"
+      exit 0
+    fi
+    make -C "${REPO_ROOT}/sim" sim ROOT="${REPO_ROOT}" MAIN_SRC="${MAIN_SRC}"
+  ) 200>"$lock"
 }
 
 copy_sim_to_workspace() {
   local ws_build="$1"
   mkdir -p "${ws_build}"
-  cp "${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top" "${ws_build}/sim"
-  chmod +x "${ws_build}/sim"
+  local dest="${ws_build}/sim"
+  if [[ -f "$dest" ]] && cmp -s "${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top" "$dest" 2>/dev/null; then
+    echo "[dev-sim] sim binary unchanged"
+    return 0
+  fi
+  cp "${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top" "${dest}.new"
+  chmod +x "${dest}.new"
+  mv -f "${dest}.new" "${dest}"
 }
 
 check_pass() {

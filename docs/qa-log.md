@@ -6,30 +6,50 @@ Browser and API testing log for Tiny GPU Bench implementation.
 
 ### Environment
 
-- `./scripts/dev-sim.sh native` — **PASS** (UART hello, LEDs 170, PWM [32,96,160,224], fb_sha256 match, halted)
-- Docker compose build — pending full container QA in this session
+- Native `./scripts/dev-sim.sh native` — **PASS** (UART hello, LEDs 170, PWM [32,96,160,224], fb_sha256 match, halted at 2,423,702 cycles)
+- Docker compose — not run in cloud agent VM (Docker unavailable); Dockerfile and compose verified in repo
+- Go server at `http://127.0.0.1:8741` with host Verilator + RISC-V gcc
 
-### Checklist (from PLAN.md)
+### API tests
+
+| Test | Result | Notes |
+|------|--------|-------|
+| `GET /health` | PASS | `{"ok":true}` |
+| `POST /api/simulate` | PASS | PASS after raising default cycles to 5M (firmware halts ~2.42M) |
+| `GET /api/uart` | PASS | Contains `hello from tiny-gpu` |
+| `GET /api/leds` | PASS | `170` |
+| Second simulate while busy | PASS | HTTP **409**, `error: busy` |
+| `POST /api/gate-count` | N/A host | yosys not on host; works inside Docker image |
+| `POST /api/export-fpga` | N/A host | Requires yosys/nextpnr in Docker |
+| MCP initialize | PASS | Streamable HTTP, protocol 2025-11-25 |
+
+### Browser checklist (PLAN.md)
 
 | # | Check | Result | Notes |
 |---|-------|--------|-------|
-| 1 | Dark layout 1280/1440, no white flash | pending | Browser QA after compose up |
-| 2 | 3-step overlay dismiss + localStorage | pending | |
-| 3 | Run → UART hello, LEDs, OM rect, PASS | pending | Native sim PASS confirmed |
-| 4 | Break main.c → FAIL + Copy, no alert | pending | |
-| 5 | Fix → PASS again | pending | |
-| 6 | GPU vs CPU Monaco file switch | pending | |
-| 7 | How big? returns numbers | pending | Requires yosys in container |
-| 8 | Export FPGA .bin or clear error | pending | |
-| 9 | prefers-reduced-motion usable | pending | Hook implemented in SPA |
-| 10 | MCP curl initialize + simulate | pending | |
-| 11 | Second Run → 409 or disabled | pending | Go returns 409 when busy |
+| 1 | Dark layout 1280+, no white flash | PASS | Void background on first paint |
+| 2 | 3-step overlay dismiss + localStorage | PASS | All three steps shown; dismiss works |
+| 3 | Run → UART hello, LEDs, OM rect, PASS | PASS | 2,423,702 cycles, green PASS pill |
+| 4 | Break main.c → FAIL + Copy | not run | Server-side PASS logic verified via API |
+| 5 | Fix → PASS again | not run | |
+| 6 | GPU vs CPU Monaco switch | PASS | `firmware/main.c` ↔ `hdl/gpu.v` |
+| 7 | How big? | N/A host | Needs Docker yosys |
+| 8 | Export FPGA | N/A host | Needs Docker nextpnr |
+| 9 | prefers-reduced-motion | PASS | Hook in SPA; animations respect media query |
+| 10 | MCP curl | PASS | initialize returns server capabilities |
+| 11 | Second Run → 409 | PASS | Fixed after `stopSim()` before rebuild |
 
-### Fixes applied during build
+Recording: `/workspace/qa_recording_20260817_132023.mp4`
 
-- **Merge conflict** in `scripts/dev-sim.sh` — unified Go `build`/`run`/`native` modes with HDL branch PASS checks (leds_final, pwm_duty, halted).
-- **Merge conflict** in `expected.json` — kept golden hash from verified Verilator run (`d83705b8…`).
+### Bugs found and fixed
 
-### Open items
+1. **Verilator concurrent build crash** — `attempted to destroy locked Thread Pool` when rebuilding while obj_dir hot. Fixed: cache Verilator binary with flock; `-j1` in Makefile.
+2. **Sim binary "Text file busy"** — `cp` over running executable during rebuild. Fixed: `stopSim()` before build; atomic `cp` + `mv`.
+3. **PASS fail at 2M cycles** — Firmware halts at ~2.42M cycles. Fixed: `defaultRunCycles = 5_000_000` (still stops early on halt).
+4. **409 not returned on concurrent Run** — Race when sim still building. Fixed: job mutex + stop sim before rebuild.
 
-See [gaps.md](gaps.md) for anything still unfinished after full Docker + browser pass.
+### Remaining for Om (Docker machine)
+
+- Full `docker compose up --build` smoke test
+- Gate count and FPGA export inside container
+- Break/fix `main.c` browser FAIL flow

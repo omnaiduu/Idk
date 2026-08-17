@@ -50,7 +50,7 @@ $(FW_HEX): $(FW_ELF)
 	$(OBJCOPY) -O verilog $< $@
 
 obj_dir/Vtiny_gpu_top: $(SRC_V) $(SRC_CPP) $(FW_HEX) | $(BUILD)
-	$(VERILATOR) --cc --exe --build -j $$(nproc) \
+	$(VERILATOR) --cc --exe --build -j 1 \
 		-Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-DECLFILENAME \
 		--top-module tiny_gpu_top \
 		-Mdir obj_dir \
