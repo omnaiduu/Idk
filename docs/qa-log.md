@@ -2,6 +2,27 @@
 
 Browser and API testing log for Tiny GPU Bench implementation.
 
+## 2026-08-18 — Lab2 MCP hello-gpu demo
+
+### Lab2 MCP (`tiny-gpu-bench` over Streamable HTTP)
+
+Used the live Lab2 MCP tools against the hello-gpu template (`firmware/main.c`: UART hello, LED chaser, OM glyphs, PWM 32/96/160/224).
+
+| Check | Result | Notes |
+|------|--------|-------|
+| MCP `initialize` | PASS | protocol **2025-11-25**, server `tiny-gpu-bench` |
+| `load_template` / workspace files | PASS | `firmware/main.c` is the hello-gpu demo |
+| `simulate` | PASS | **2,423,702** cycles, `last_mcp_tool=simulate` |
+| `get_uart` | PASS | `hello from tiny-gpu` |
+| `get_leds` | PASS | **170** (`0xAA`) |
+| `get_servos` | PASS | `[32, 96, 160, 224]` |
+| `get_framebuffer` | PASS | 4096 bytes, sha256 matches `expected.json` |
+| `get_waves` | PASS | 1024 samples each for clk / gpu_busy / led0 / pwm0 |
+
+Cursor Cloud `CallMcpTool` failed on the wire shape `"structuredContent": null` (expected a JSON object). MCP tools still executed; results were read via MCP `tools/call` curl. Fixed handlers to always return a JSON object as structured output.
+
+---
+
 ## 2026-08-18 — UI polish + backend hardening
 
 ### Environment

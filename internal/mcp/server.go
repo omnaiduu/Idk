@@ -73,22 +73,43 @@ func textResult(v any) (*mcp.CallToolResult, map[string]any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil, nil
+	obj := map[string]any{}
+	if len(b) > 0 && string(b) != "null" {
+		if err := json.Unmarshal(b, &obj); err != nil {
+			return nil, nil, fmt.Errorf("mcp result must be a JSON object: %w", err)
+		}
+	}
+	if obj == nil {
+		obj = map[string]any{}
+	}
+	return &mcp.CallToolResult{
+		Content:           []mcp.Content{&mcp.TextContent{Text: string(b)}},
+		StructuredContent: obj,
+	}, obj, nil
 }
 
-func (s *Server) toolSimulate(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func errorResult(err error) (*mcp.CallToolResult, map[string]any, error) {
+	obj := map[string]any{"ok": false, "error": err.Error()}
+	return &mcp.CallToolResult{
+		IsError:           true,
+		Content:           []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+		StructuredContent: obj,
+	}, obj, nil
+}
+
+func (s *Server) toolSimulate(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	res := s.bench.Simulate(ctx)
 	s.bench.RecordMCPTool("simulate", res.Pass)
 	return textResult(res)
 }
 
-func (s *Server) toolStep(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolStep(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	res := s.bench.Step(ctx)
 	s.bench.RecordMCPTool("step", res.Pass)
 	return textResult(res)
 }
 
-func (s *Server) toolReset(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolReset(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	res := s.bench.Reset(ctx)
 	s.bench.RecordMCPTool("reset", res.Pass)
 	return textResult(res)
@@ -98,19 +119,19 @@ type pathArgs struct {
 	Path string `json:"path" jsonschema:"relative workspace path"`
 }
 
-func (s *Server) toolListFiles(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolListFiles(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	files, err := s.bench.Workspace().List()
 	if err != nil {
-		return nil, nil, err
+		return errorResult(err)
 	}
 	s.bench.RecordMCPTool("list_files", nil)
 	return textResult(map[string]any{"files": files})
 }
 
-func (s *Server) toolReadFile(ctx context.Context, _ *mcp.CallToolRequest, args pathArgs) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolReadFile(ctx context.Context, _ *mcp.CallToolRequest, args pathArgs) (*mcp.CallToolResult, map[string]any, error) {
 	content, err := s.bench.Workspace().Read(args.Path)
 	if err != nil {
-		return nil, nil, err
+		return errorResult(err)
 	}
 	s.bench.RecordMCPTool("read_file", nil)
 	return textResult(map[string]string{"path": args.Path, "content": content})
@@ -121,21 +142,21 @@ type writeArgs struct {
 	Content string `json:"content"`
 }
 
-func (s *Server) toolWriteFile(ctx context.Context, _ *mcp.CallToolRequest, args writeArgs) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolWriteFile(ctx context.Context, _ *mcp.CallToolRequest, args writeArgs) (*mcp.CallToolResult, map[string]any, error) {
 	if err := s.bench.Workspace().Write(args.Path, args.Content); err != nil {
-		return nil, nil, err
+		return errorResult(err)
 	}
 	s.bench.RecordMCPTool("write_file", nil)
 	return textResult(map[string]bool{"ok": true})
 }
 
-func (s *Server) toolGateCount(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGateCount(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	res := s.bench.GateCount(ctx)
 	s.bench.RecordMCPTool("gate_count", nil)
 	return textResult(res)
 }
 
-func (s *Server) toolExportFPGA(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolExportFPGA(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	data, log, err := s.bench.ExportFPGA(ctx)
 	if err != nil {
 		return textResult(map[string]string{"error": err.Error(), "log": log})
@@ -149,32 +170,32 @@ func (s *Server) toolExportFPGA(ctx context.Context, _ *mcp.CallToolRequest, _ s
 	})
 }
 
-func (s *Server) toolGetUART(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetUART(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_uart", nil)
 	return textResult(map[string]string{"text": s.bench.UART()})
 }
 
-func (s *Server) toolGetLEDs(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetLEDs(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_leds", nil)
 	return textResult(map[string]int{"leds": s.bench.LEDs()})
 }
 
-func (s *Server) toolGetServos(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetServos(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_servos", nil)
 	return textResult(map[string][4]int{"duty": s.bench.Servos()})
 }
 
-func (s *Server) toolGetFramebuffer(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetFramebuffer(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_framebuffer", nil)
 	return textResult(map[string]string{"base64": base64.StdEncoding.EncodeToString(s.bench.Framebuffer())})
 }
 
-func (s *Server) toolGetWaves(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetWaves(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_waves", nil)
 	return textResult(s.bench.Waves())
 }
 
-func (s *Server) toolGetStatus(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolGetStatus(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, map[string]any, error) {
 	s.bench.RecordMCPTool("get_status", nil)
 	return textResult(s.bench.Status())
 }
@@ -183,13 +204,13 @@ type templateArgs struct {
 	Template string `json:"template" jsonschema:"template name, default hello-gpu"`
 }
 
-func (s *Server) toolLoadTemplate(ctx context.Context, _ *mcp.CallToolRequest, args templateArgs) (*mcp.CallToolResult, any, error) {
+func (s *Server) toolLoadTemplate(ctx context.Context, _ *mcp.CallToolRequest, args templateArgs) (*mcp.CallToolResult, map[string]any, error) {
 	name := args.Template
 	if name == "" {
 		name = "hello-gpu"
 	}
 	if err := s.bench.LoadTemplate(name); err != nil {
-		return nil, nil, err
+		return errorResult(err)
 	}
 	s.bench.RecordMCPTool("load_template", nil)
 	return textResult(map[string]bool{"ok": true})

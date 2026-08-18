@@ -63,6 +63,8 @@ curl -s -X POST http://127.0.0.1:8741/mcp \
 
 The response includes cycle count, PASS/FAIL, and UART excerpt — same logic as `POST /api/simulate`.
 
+Tool results always include a JSON **object** in `structuredContent` (never `null`). Cursor Cloud rejects `structuredContent: null`.
+
 ## Tools
 
 | Tool | REST equivalent |
