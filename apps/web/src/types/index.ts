@@ -1,9 +1,10 @@
-export type PassState = "idle" | "pass" | "fail" | "running";
+export type PassState = "idle" | "pass" | "fail" | "ran" | "running";
 
 export interface BenchStatus {
   ok: boolean;
   cycles: number;
   pass: boolean | null;
+  outcome?: "pass" | "fail" | "ran";
   running: boolean;
   busy?: boolean;
   message?: string;
@@ -29,6 +30,7 @@ export interface WavesState {
 export interface SimulateResult {
   ok: boolean;
   pass?: boolean;
+  outcome?: "pass" | "fail" | "ran";
   cycles?: number;
   message?: string;
   error?: string;
@@ -69,5 +71,6 @@ export interface ApiError {
 export interface McpDrawerState {
   tool: string;
   pass: boolean | null;
+  outcome?: "pass" | "fail" | "ran";
   timestamp: number;
 }

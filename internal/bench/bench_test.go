@@ -2,6 +2,7 @@ package bench
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"tiny-gpu-bench/internal/sim"
@@ -29,11 +30,13 @@ func TestToSimResultBusy(t *testing.T) {
 	}
 }
 
-func TestToSimResultPass(t *testing.T) {
+func TestToSimResultRan(t *testing.T) {
 	b := &Bench{}
-	pass := true
-	res := b.toSimResult(&sim.Result{Cycles: 42, Pass: &pass, Message: "PASS"}, nil)
-	if !res.OK || res.Cycles != 42 || res.Pass == nil || !*res.Pass {
+	res := b.toSimResult(&sim.Result{Cycles: 17911, Outcome: sim.OutcomeRan, Message: "RAN: uart missing expected text"}, nil)
+	if !res.OK || res.Pass != nil || res.Outcome != sim.OutcomeRan {
 		t.Fatalf("unexpected %+v", res)
+	}
+	if strings.Contains(res.Message, "FAIL") {
+		t.Fatalf("RAN message must not say FAIL: %q", res.Message)
 	}
 }

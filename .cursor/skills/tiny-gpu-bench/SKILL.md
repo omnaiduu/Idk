@@ -8,7 +8,7 @@ description: Locked contracts, address map, PASS criteria, and QA checklist for 
 ## Quick facts
 
 - **Run:** `docker compose up --build` → [http://127.0.0.1:8741](http://127.0.0.1:8741)
-- **PASS source:** `templates/hello-gpu/expected.json` — never fake PASS
+- **PASS source:** `templates/hello-gpu/expected.json` — never fake PASS. Custom firmware that **halts** is **RAN**, not FAIL (FAIL is compile/timeout/no-halt).
 - **Sim script:** `./scripts/dev-sim.sh native` must exit 0 before claiming sim works
 - **MCP:** `http://127.0.0.1:8741/mcp` — no auth, localhost only
 
