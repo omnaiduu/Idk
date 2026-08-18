@@ -21,6 +21,8 @@ Used the live Lab2 MCP tools against the hello-gpu template (`firmware/main.c`: 
 
 Cursor Cloud `CallMcpTool` failed on the wire shape `"structuredContent": null` (expected a JSON object). MCP tools still executed; results were read via MCP `tools/call` curl. Fixed handlers to always return a JSON object as structured output.
 
+Custom firmware that **halts** is now **RAN**, not FAIL. FAIL is reserved for compile/timeout/CPU-never-halted. PASS remains the hello-gpu golden contract.
+
 ---
 
 ## 2026-08-18 — UI polish + backend hardening

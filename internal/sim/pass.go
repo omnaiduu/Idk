@@ -59,3 +59,28 @@ func EvaluateExpected(exp Expected, uart string, leds int, pwm [4]int, fb []byte
 	}
 	return pass, msg
 }
+
+const (
+	OutcomePass = "pass"
+	OutcomeFail = "fail"
+	OutcomeRan  = "ran"
+)
+
+// ScoreRun maps dumps to a bench verdict.
+//
+//	PASS — hello-gpu golden matched
+//	FAIL — the machine did not finish (never halted, or later failState)
+//	RAN  — firmware halted; golden demo checks did not match (custom code)
+func ScoreRun(exp Expected, uart string, leds int, pwm [4]int, fb []byte, halted bool) (pass *bool, outcome, msg string) {
+	ok, evalMsg := EvaluateExpected(exp, uart, leds, pwm, fb, halted)
+	if ok {
+		t := true
+		return &t, OutcomePass, "PASS"
+	}
+	if halted {
+		reasons := strings.TrimPrefix(evalMsg, "FAIL: ")
+		return nil, OutcomeRan, "RAN: " + reasons
+	}
+	f := false
+	return &f, OutcomeFail, evalMsg
+}

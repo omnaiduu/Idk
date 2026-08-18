@@ -29,11 +29,10 @@ func TestToSimResultBusy(t *testing.T) {
 	}
 }
 
-func TestToSimResultPass(t *testing.T) {
+func TestToSimResultRan(t *testing.T) {
 	b := &Bench{}
-	pass := true
-	res := b.toSimResult(&sim.Result{Cycles: 42, Pass: &pass, Message: "PASS"}, nil)
-	if !res.OK || res.Cycles != 42 || res.Pass == nil || !*res.Pass {
+	res := b.toSimResult(&sim.Result{Cycles: 100, Outcome: sim.OutcomeRan, Message: "RAN: uart missing expected text"}, nil)
+	if !res.OK || res.Pass != nil || res.Outcome != sim.OutcomeRan {
 		t.Fatalf("unexpected %+v", res)
 	}
 }

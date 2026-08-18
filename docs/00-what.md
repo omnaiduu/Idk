@@ -1,6 +1,6 @@
 # What is Tiny GPU Bench?
 
-Tiny GPU Bench is a browser-based digital lab. You edit Verilog (the machine) and C (the program running on a CPU inside that machine), press Run, and the server simulates the design with Verilator. The UI shows UART output, eight LEDs, four drawn servo arms, a 64×64 pixel screen, waveforms, and a PASS or FAIL verdict backed by numbers in `expected.json`.
+Tiny GPU Bench is a browser-based digital lab. You edit Verilog (the machine) and C (the program running on a CPU inside that machine), press Run, and the server simulates the design with Verilator. The UI shows UART output, eight LEDs, four drawn servo arms, a 64×64 pixel screen, waveforms, and a verdict: **PASS** (hello-gpu golden), **RAN** (your firmware halted — custom code), or **FAIL** (it did not run).
 
 ## What it does
 
