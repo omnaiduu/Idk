@@ -1,9 +1,13 @@
 ---
 name: tiny-gpu-bench
-description: Locked contracts, address map, PASS criteria, and QA checklist for Tiny GPU Bench. Use when editing HDL, firmware, Go API, SPA, Docker, or docs.
+description: Locked contracts, address map, PASS criteria, and QA checklist for Tiny GPU Bench. Use when editing HDL, firmware, Go API, SPA, Docker, or docs — not when only running the lab via MCP.
 ---
 
-# Tiny GPU Bench agent skill
+# Tiny GPU Bench agent skill (maintainers)
+
+For **using** the running lab from Cursor (Lab2 MCP, custom `main.c`, simulate), load [tiny-gpu-lab](../tiny-gpu-lab/SKILL.md) instead.
+
+This file is for **changing the product**.
 
 ## Quick facts
 

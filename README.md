@@ -28,7 +28,7 @@ The same Go process serves MCP on localhost with no password. Add this to Cursor
 }
 ```
 
-See [docs/05-mcp.md](docs/05-mcp.md) for curl examples. **Never publish port 8741 to the public internet** — there is no authentication.
+See [docs/05-mcp.md](docs/05-mcp.md) for curl examples. Agents: read [`.cursor/skills/tiny-gpu-lab/SKILL.md`](.cursor/skills/tiny-gpu-lab/SKILL.md) for how to drive the bench (hello-gpu, custom C, PASS vs FAIL). **Never publish port 8741 to the public internet** — there is no authentication.
 
 ## What this is not
 
@@ -44,5 +44,6 @@ Blog-ready material lives in [docs/](docs/):
 - [03-how-it-works.md](docs/03-how-it-works.md) — architecture
 - [04-decisions.md](docs/04-decisions.md) — decision log
 - [05-mcp.md](docs/05-mcp.md) — MCP tools and curl
+- [`.cursor/skills/tiny-gpu-lab/SKILL.md`](.cursor/skills/tiny-gpu-lab/SKILL.md) — agent skill for running the lab
 
 License: Apache-2.0 for our code. Verilator and other tools keep their own licenses inside the Docker image.
