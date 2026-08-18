@@ -18,15 +18,17 @@ GCCFLAGS   := -march=rv32i -mabi=ilp32 -nostdlib -nostartfiles \
 
 MAIN_SRC   ?= $(ROOT)/templates/hello-gpu/main.c
 
-SRC_V      := $(ROOT)/hdl/tiny_gpu_top.v \
-              $(ROOT)/hdl/soc.v \
-              $(ROOT)/hdl/picorv32.v \
-              $(ROOT)/hdl/ram.v \
-              $(ROOT)/hdl/gpio_led.v \
-              $(ROOT)/hdl/btn.v \
-              $(ROOT)/hdl/uart_tx.v \
-              $(ROOT)/hdl/pwm.v \
-              $(ROOT)/hdl/gpu.v
+HDL_DIR    ?= $(ROOT)/hdl
+
+SRC_V      := $(HDL_DIR)/tiny_gpu_top.v \
+              $(HDL_DIR)/soc.v \
+              $(HDL_DIR)/picorv32.v \
+              $(HDL_DIR)/ram.v \
+              $(HDL_DIR)/gpio_led.v \
+              $(HDL_DIR)/btn.v \
+              $(HDL_DIR)/uart_tx.v \
+              $(HDL_DIR)/pwm.v \
+              $(HDL_DIR)/gpu.v
 
 SRC_CPP    := main.cpp dpi_dump.cpp
 

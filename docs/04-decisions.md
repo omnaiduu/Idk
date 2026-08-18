@@ -13,6 +13,8 @@ Timeline of locked choices for Tiny GPU Bench. Agents should append dates and PR
 9. **SPA (Vite + React 19)** — One-page lab, not Next.js SSR; Go serves `apps/web/dist`. *(Aug 2026)*
 10. **PASS is numbers** — `expected.json` with UART substring, LED/PWM values, `fb_sha256`, `halted`; never fake PASS. *(Aug 2026)*
 
+11. **UI + backend polish (18 Aug 2026)** — CRT scale fits the 280px rail; onboarding is a corner card that never blocks Run; PASS pill stays idle until this session actually runs; HDL builds from the workspace copy; sim process groups are waited/killed on timeout; native Go bind defaults to `127.0.0.1` (Docker still sets `HOST=0.0.0.0`).
+
 ## Why Go?
 
 Go’s `os/exec` with process groups, timeouts, and a single static binary fits the “waiter” role: start Verilator, kill on timeout, parse JSON lines. The official [`github.com/modelcontextprotocol/go-sdk`](https://github.com/modelcontextprotocol/go-sdk) provides Streamable HTTP MCP. Rust would also work; Go was chosen after dropping Tauri for faster shipping.

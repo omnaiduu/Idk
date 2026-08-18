@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	host := env("HOST", "0.0.0.0")
+	host := env("HOST", "127.0.0.1")
 	port := env("PORT", "8741")
 	webRoot := env("WEB_ROOT", "./apps/web/dist")
 	wsRoot := env("WORKSPACE", "./workspace-data")
@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := ws.LoadTemplate("hello-gpu"); err != nil {
+	if err := ws.LoadTemplateIfEmpty("hello-gpu"); err != nil {
 		log.Printf("warning: load template: %v", err)
 	}
 
@@ -50,7 +50,7 @@ func main() {
 	mux.Handle("/", apiServer.Handler())
 
 	addr := host + ":" + port
-	log.Printf("tiny-gpu-bench listening on %s", addr)
+	log.Printf("tiny-gpu-bench listening on %s (bind is localhost by default; Docker sets HOST=0.0.0.0)", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}

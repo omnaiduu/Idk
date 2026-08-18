@@ -5,17 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"tiny-gpu-bench/internal/bench"
+	"tiny-gpu-bench/internal/origin"
 )
-
-var allowedOrigins = map[string]bool{
-	"http://127.0.0.1:8741": true,
-	"http://localhost:8741": true,
-}
 
 // Server serves HTTP API and static SPA assets.
 type Server struct {
@@ -72,37 +69,21 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := requestContext(r, 120*time.Second)
 	defer cancel()
 	res := s.bench.Simulate(ctx)
-	if res.Error == "busy" {
-		writeJSON(w, http.StatusConflict, res)
-		return
-	}
-	status := http.StatusOK
-	if !res.OK {
-		status = http.StatusInternalServerError
-	}
-	writeJSON(w, status, res)
+	writeSimResult(w, res)
 }
 
 func (s *Server) handleStep(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := requestContext(r, 30*time.Second)
 	defer cancel()
 	res := s.bench.Step(ctx)
-	if res.Error == "busy" {
-		writeJSON(w, http.StatusConflict, res)
-		return
-	}
-	writeJSON(w, http.StatusOK, res)
+	writeSimResult(w, res)
 }
 
 func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := requestContext(r, 30*time.Second)
 	defer cancel()
 	res := s.bench.Reset(ctx)
-	if res.Error == "busy" {
-		writeJSON(w, http.StatusConflict, res)
-		return
-	}
-	writeJSON(w, http.StatusOK, res)
+	writeSimResult(w, res)
 }
 
 func (s *Server) handleButton(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +95,11 @@ func (s *Server) handleButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.bench.SetButton(body.Down); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		status := http.StatusBadRequest
+		if strings.HasPrefix(err.Error(), "busy") {
+			status = http.StatusConflict
+		}
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -254,13 +239,13 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" {
-			if !allowedOrigins[origin] {
+		reqOrigin := r.Header.Get("Origin")
+		if reqOrigin != "" {
+			if !origin.Allow(reqOrigin) {
 				http.Error(w, "origin not allowed", http.StatusForbidden)
 				return
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Origin", reqOrigin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -273,22 +258,48 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func writeSimResult(w http.ResponseWriter, res bench.SimulateResult) {
+	if res.Error == "busy" {
+		writeJSON(w, http.StatusConflict, res)
+		return
+	}
+	status := http.StatusOK
+	if !res.OK {
+		status = http.StatusInternalServerError
+	}
+	writeJSON(w, status, res)
+}
+
 func spaHandler(webRoot string) http.Handler {
-	fs := http.FileServer(http.Dir(webRoot))
+	root, err := filepath.Abs(webRoot)
+	if err != nil {
+		root = webRoot
+	}
+	index := filepath.Join(root, "index.html")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" || r.URL.Path == "/mcp" {
 			http.NotFound(w, r)
 			return
 		}
-		path := filepath.Join(webRoot, filepath.Clean(r.URL.Path))
-		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, "/") {
-			http.ServeFile(w, r, filepath.Join(webRoot, "index.html"))
+		rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		if rel == "." || rel == "" || strings.HasSuffix(r.URL.Path, "/") {
+			http.ServeFile(w, r, index)
 			return
 		}
-		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			http.ServeFile(w, r, filepath.Join(webRoot, "index.html"))
+		abs := filepath.Join(root, filepath.FromSlash(rel))
+		if abs != root && !strings.HasPrefix(abs, root+string(filepath.Separator)) {
+			http.ServeFile(w, r, index)
 			return
 		}
-		fs.ServeHTTP(w, r)
+		st, err := os.Stat(abs)
+		if err != nil || st.IsDir() {
+			if errors.Is(err, os.ErrNotExist) || (err == nil && st.IsDir()) {
+				http.ServeFile(w, r, index)
+				return
+			}
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, abs)
 	})
 }

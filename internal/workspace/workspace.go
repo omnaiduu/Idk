@@ -19,10 +19,10 @@ type FileEntry struct {
 
 // Workspace is a path-jailed working directory for user sources and build artifacts.
 type Workspace struct {
-	root       string
-	templates  string
-	repoHDL    string
-	repoFW     string
+	root      string
+	templates string
+	repoHDL   string
+	repoFW    string
 }
 
 // New creates a workspace rooted at root with template and repo asset directories.
@@ -38,11 +38,19 @@ func New(root, templatesDir, repoHDL, repoFW string) (*Workspace, error) {
 	}, nil
 }
 
-func (w *Workspace) Root() string      { return w.root }
-func (w *Workspace) BuildDir() string  { return filepath.Join(w.root, "build") }
-func (w *Workspace) DumpsDir() string  { return filepath.Join(w.root, "dumps") }
-func (w *Workspace) HDLDir() string    { return filepath.Join(w.root, "hdl") }
+func (w *Workspace) Root() string        { return w.root }
+func (w *Workspace) BuildDir() string    { return filepath.Join(w.root, "build") }
+func (w *Workspace) DumpsDir() string    { return filepath.Join(w.root, "dumps") }
+func (w *Workspace) HDLDir() string      { return filepath.Join(w.root, "hdl") }
 func (w *Workspace) FirmwareDir() string { return filepath.Join(w.root, "firmware") }
+
+func insideJail(root, abs string) bool {
+	if abs == root {
+		return true
+	}
+	sep := string(filepath.Separator)
+	return strings.HasPrefix(abs+sep, root+sep)
+}
 
 // Resolve validates rel and returns an absolute path inside the workspace jail.
 func (w *Workspace) Resolve(rel string) (string, error) {
@@ -57,17 +65,35 @@ func (w *Workspace) Resolve(rel string) (string, error) {
 	if clean == ".." || strings.HasPrefix(clean, "../") {
 		return "", fmt.Errorf("path traversal not allowed")
 	}
-	abs := filepath.Join(w.root, filepath.FromSlash(clean))
 	root, err := filepath.Abs(w.root)
 	if err != nil {
 		return "", err
 	}
-	abs, err = filepath.Abs(abs)
+	abs, err := filepath.Abs(filepath.Join(root, filepath.FromSlash(clean)))
 	if err != nil {
 		return "", err
 	}
-	if abs != root && !strings.HasPrefix(abs+string(filepath.Separator), root+string(filepath.Separator)) {
+	if !insideJail(root, abs) {
 		return "", fmt.Errorf("path outside workspace")
+	}
+
+	// If the path (or its parent) exists, resolve symlinks and re-check the jail.
+	check := abs
+	if _, err := os.Lstat(abs); err != nil {
+		check = filepath.Dir(abs)
+	}
+	if resolved, err := filepath.EvalSymlinks(check); err == nil {
+		rootResolved := root
+		if rr, err := filepath.EvalSymlinks(root); err == nil {
+			rootResolved = rr
+		}
+		final := resolved
+		if check == filepath.Dir(abs) {
+			final = filepath.Join(resolved, filepath.Base(abs))
+		}
+		if !insideJail(rootResolved, final) && !insideJail(root, final) {
+			return "", fmt.Errorf("path outside workspace")
+		}
 	}
 	return abs, nil
 }
@@ -221,4 +247,18 @@ func (w *Workspace) EnsureDirs() error {
 		}
 	}
 	return nil
+}
+
+// Initialized reports whether the workspace already has student sources.
+func (w *Workspace) Initialized() bool {
+	_, err := os.Stat(filepath.Join(w.root, "firmware", "main.c"))
+	return err == nil
+}
+
+// LoadTemplateIfEmpty copies hello-gpu on first boot without wiping edits on restart.
+func (w *Workspace) LoadTemplateIfEmpty(name string) error {
+	if w.Initialized() {
+		return nil
+	}
+	return w.LoadTemplate(name)
 }

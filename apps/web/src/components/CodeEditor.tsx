@@ -1,4 +1,4 @@
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { useCallback, useRef } from "react";
 
@@ -27,6 +27,7 @@ function defineTheme(monaco: typeof import("monaco-editor")) {
     colors: {
       "editor.background": VOID,
       "editor.foreground": CREAM,
+      "editorGutter.background": VOID,
       "editorLineNumber.foreground": "#5c584f",
       "editorLineNumber.activeForeground": CREAM,
       "editor.selectionBackground": "#ff6a2a33",
@@ -44,6 +45,10 @@ function defineTheme(monaco: typeof import("monaco-editor")) {
 export function CodeEditor({ path, value, onChange, readOnly }: CodeEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
+  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    defineTheme(monaco);
+  }, []);
+
   const handleMount: OnMount = useCallback((ed, monaco) => {
     editorRef.current = ed;
     defineTheme(monaco);
@@ -58,8 +63,10 @@ export function CodeEditor({ path, value, onChange, readOnly }: CodeEditorProps)
       <Editor
         height="100%"
         language={language}
+        theme="tiny-gpu-void"
         value={value}
         onChange={(v) => onChange(v ?? "")}
+        beforeMount={handleBeforeMount}
         onMount={handleMount}
         options={{
           readOnly,
@@ -80,7 +87,7 @@ export function CodeEditor({ path, value, onChange, readOnly }: CodeEditorProps)
           },
         }}
         loading={
-          <div className="flex h-full items-center justify-center text-sm text-cream-muted">
+          <div className="flex h-full items-center justify-center bg-void text-sm text-cream-muted">
             Loading editor…
           </div>
         }

@@ -17,6 +17,7 @@ export function ErrorSlideOver({ error, onDismiss }: ErrorSlideOverProps) {
   const [copied, setCopied] = useState(false);
 
   const logText = [error?.error, error?.message, error?.log].filter(Boolean).join("\n\n");
+  const busy = error?.status === 409;
 
   const copy = useCallback(async () => {
     await navigator.clipboard.writeText(logText);
@@ -37,7 +38,7 @@ export function ErrorSlideOver({ error, onDismiss }: ErrorSlideOverProps) {
             onClick={onDismiss}
           />
           <motion.aside
-            className="fixed bottom-0 right-0 top-12 z-50 flex w-full max-w-lg flex-col border-l border-cream-border bg-void-elevated shadow-2xl"
+            className="fixed bottom-0 right-0 top-12 z-50 flex w-full max-w-lg flex-col overflow-hidden border-l border-cream-border bg-void-elevated shadow-2xl"
             initial={reduced ? false : { x: "100%" }}
             animate={{ x: 0 }}
             exit={reduced ? undefined : { x: "100%" }}
@@ -45,13 +46,13 @@ export function ErrorSlideOver({ error, onDismiss }: ErrorSlideOverProps) {
             role="alertdialog"
             aria-labelledby="error-title"
           >
-            <div className="flex items-center justify-between border-b border-cream-border px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between border-b border-cream-border px-4 py-3">
               <div>
-                <h2 id="error-title" className="text-sm font-semibold text-red-300">
-                  Simulation error
+                <h2 id="error-title" className="text-sm font-semibold text-cream">
+                  {busy ? "Bench busy" : "Simulation error"}
                 </h2>
                 <p className="text-xs text-cream-muted">
-                  {error.status === 409 ? "Bench is busy — wait for the current run." : error.error}
+                  {busy ? "Wait for the current run to finish." : error.error}
                 </p>
               </div>
               <div className="flex gap-1">
@@ -64,7 +65,7 @@ export function ErrorSlideOver({ error, onDismiss }: ErrorSlideOverProps) {
                 </Button>
               </div>
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="min-h-0 flex-1">
               <pre className="whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-cream">
                 {logText}
               </pre>

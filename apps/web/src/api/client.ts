@@ -11,6 +11,17 @@ import type {
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+function fileURL(path: string) {
+  return (
+    "/api/files/" +
+    path
+      .split("/")
+      .filter(Boolean)
+      .map(encodeURIComponent)
+      .join("/")
+  );
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   const text = await res.text();
   let data: unknown = {};
@@ -109,12 +120,12 @@ export async function listFiles(): Promise<FilesListResult> {
 }
 
 export async function readFile(path: string): Promise<FileContent> {
-  const res = await fetch(`/api/files/${encodeURIComponent(path)}`);
+  const res = await fetch(fileURL(path));
   return handleResponse<FileContent>(res);
 }
 
 export async function writeFile(path: string, content: string): Promise<{ ok: boolean }> {
-  const res = await fetch(`/api/files/${encodeURIComponent(path)}`, {
+  const res = await fetch(fileURL(path), {
     method: "PUT",
     headers: JSON_HEADERS,
     body: JSON.stringify({ content }),

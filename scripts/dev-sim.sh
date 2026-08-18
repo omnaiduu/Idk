@@ -31,21 +31,17 @@ build_firmware() {
 }
 
 build_verilator() {
-  local sim_bin="${REPO_ROOT}/sim/obj_dir/Vtiny_gpu_top"
   local lock="${REPO_ROOT}/build/.verilator.lock"
-  mkdir -p "${REPO_ROOT}/build"
-  if [[ -x "$sim_bin" ]]; then
-    echo "[dev-sim] verilator binary cached"
-    return 0
+  local hdl_dir="${HDL_DIR:-${WORKSPACE}/hdl}"
+  if [[ ! -f "${hdl_dir}/tiny_gpu_top.v" ]]; then
+    hdl_dir="${REPO_ROOT}/hdl"
   fi
-  echo "[dev-sim] verilator build"
+  mkdir -p "${REPO_ROOT}/build"
+  echo "[dev-sim] verilator (HDL_DIR=${hdl_dir})"
   (
     flock -x 200
-    if [[ -x "$sim_bin" ]]; then
-      echo "[dev-sim] verilator binary cached (after lock)"
-      exit 0
-    fi
-    make -C "${REPO_ROOT}/sim" sim ROOT="${REPO_ROOT}" MAIN_SRC="${MAIN_SRC}"
+    # Let make decide staleness — do not skip just because the binary exists.
+    make -C "${REPO_ROOT}/sim" sim ROOT="${REPO_ROOT}" HDL_DIR="${hdl_dir}" MAIN_SRC="${MAIN_SRC}"
   ) 200>"$lock"
 }
 
@@ -129,7 +125,7 @@ case "$MODE" in
     build_verilator
     copy_sim_to_workspace "${WORKSPACE}/build"
     export DUMP_DIR="${WORKSPACE}/dumps"
-    printf '{"cmd":"reset"}\n{"cmd":"run","cycles":2000000}\n' \
+    printf '{"cmd":"reset"}\n{"cmd":"run","cycles":5000000}\n' \
       | "${WORKSPACE}/build/sim" "+firmware=${WORKSPACE}/build/firmware.hex"
     ;;
   native)

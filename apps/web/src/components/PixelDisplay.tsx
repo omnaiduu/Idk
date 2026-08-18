@@ -3,7 +3,7 @@ import { getFramebufferBinary } from "@/api/client";
 import { rgb332ToCss } from "@/lib/utils";
 
 const FB_SIZE = 64;
-const SCALE = 8;
+const CSS_PX = 256; // integer ×4 so the 280px rail does not overflow
 
 interface PixelDisplayProps {
   refreshKey: number;
@@ -20,9 +20,11 @@ export function PixelDisplay({ refreshKey, empty }: PixelDisplayProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = "#0a0906";
+    ctx.fillRect(0, 0, FB_SIZE, FB_SIZE);
+
     if (empty) {
-      ctx.fillStyle = "#0a0906";
-      ctx.fillRect(0, 0, FB_SIZE * SCALE, FB_SIZE * SCALE);
       return;
     }
 
@@ -49,14 +51,7 @@ export function PixelDisplay({ refreshKey, empty }: PixelDisplayProps) {
             imageData.data[i + 3] = 255;
           }
         }
-        const offscreen = document.createElement("canvas");
-        offscreen.width = FB_SIZE;
-        offscreen.height = FB_SIZE;
-        offscreen.getContext("2d")?.putImageData(imageData, 0, 0);
-        ctx.imageSmoothingEnabled = false;
-        ctx.fillStyle = "#0a0906";
-        ctx.fillRect(0, 0, FB_SIZE * SCALE, FB_SIZE * SCALE);
-        ctx.drawImage(offscreen, 0, 0, FB_SIZE * SCALE, FB_SIZE * SCALE);
+        ctx.putImageData(imageData, 0, 0);
         setError(false);
       } catch {
         if (!cancelled) setError(true);
@@ -69,21 +64,27 @@ export function PixelDisplay({ refreshKey, empty }: PixelDisplayProps) {
   }, [refreshKey, empty]);
 
   return (
-    <div className="relative mx-auto">
-      <div className="rounded-md border-2 border-ember/70 bg-void p-1.5 glow-ember crt-inner">
+    <div className="relative mx-auto w-fit">
+      <div className="rounded-sm border-2 border-ember/55 bg-[#0a0906] crt-inner crt-scan">
         <canvas
           ref={canvasRef}
-          width={FB_SIZE * SCALE}
-          height={FB_SIZE * SCALE}
-          className="pixelated block rounded-sm bg-[#0a0906]"
+          width={FB_SIZE}
+          height={FB_SIZE}
+          style={{ width: CSS_PX, height: CSS_PX }}
+          className="pixelated block bg-[#0a0906]"
           aria-label="64 by 64 GPU framebuffer"
         />
+        {empty && (
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 text-center text-[11px] leading-relaxed text-cream-muted">
+            Press Run. You should see hello and a rectangle.
+          </p>
+        )}
       </div>
       {error && (
         <p className="mt-2 text-center text-[10px] text-cream-muted">No framebuffer yet</p>
       )}
       <p className="mt-2 text-center text-[10px] uppercase tracking-wider text-cream-muted">
-        64×64 RGB332 · ×{SCALE}
+        64×64 RGB332 · ×{CSS_PX / FB_SIZE}
       </p>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "@/api/client";
 import type { ApiError, BenchStatus, McpDrawerState, PassState } from "@/types";
 
@@ -11,25 +11,13 @@ export function useBench() {
   const [error, setError] = useState<ApiError | null>(null);
   const [mcpState, setMcpState] = useState<McpDrawerState | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const sawRun = useRef(false);
 
   const refreshStatus = useCallback(async () => {
     try {
       const s = await api.getStatus();
       setStatus(s);
       setCycles(s.cycles ?? 0);
-      if (s.running) {
-        setPassState("running");
-        setRunning(true);
-      } else if (s.pass === true) {
-        setPassState("pass");
-        setRunning(false);
-      } else if (s.pass === false) {
-        setPassState("fail");
-        setRunning(false);
-      } else {
-        setPassState("idle");
-        setRunning(false);
-      }
       if (s.last_mcp_tool) {
         setMcpState({
           tool: s.last_mcp_tool,
@@ -37,8 +25,22 @@ export function useBench() {
           timestamp: Date.now(),
         });
       }
+      if (s.running || s.busy) {
+        sawRun.current = true;
+        setPassState("running");
+        setRunning(true);
+        return;
+      }
+      setRunning(false);
+      if (!sawRun.current) {
+        setPassState("idle");
+        return;
+      }
+      if (s.pass === true) setPassState("pass");
+      else if (s.pass === false) setPassState("fail");
+      else setPassState("idle");
     } catch {
-      // Backend may not be up during dev
+      // Backend may not be up during Vite-only preview
     }
   }, []);
 
@@ -57,10 +59,18 @@ export function useBench() {
     };
   }, [refreshStatus]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refreshStatus();
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [refreshStatus]);
+
   const handleRun = useCallback(async () => {
     setError(null);
     setRunning(true);
     setPassState("running");
+    sawRun.current = true;
     try {
       const result = await api.simulate();
       setCycles(result.cycles ?? 0);
@@ -80,6 +90,11 @@ export function useBench() {
       return result;
     } catch (e) {
       const err = e as ApiError;
+      if (err.status === 409) {
+        setError(err);
+        await refreshStatus();
+        throw err;
+      }
       setPassState("fail");
       setError(err);
       throw err;
@@ -90,13 +105,16 @@ export function useBench() {
 
   const handleStep = useCallback(async () => {
     setError(null);
+    sawRun.current = true;
     try {
       const result = await api.step();
       setCycles(result.cycles ?? cycles);
       await refreshStatus();
       return result;
     } catch (e) {
-      setError(e as ApiError);
+      const err = e as ApiError;
+      if (err.status !== 409) setError(err);
+      else setError(err);
       throw e;
     }
   }, [cycles, refreshStatus]);
@@ -105,6 +123,7 @@ export function useBench() {
     setError(null);
     try {
       await api.reset();
+      sawRun.current = false;
       setPassState("idle");
       setCycles(0);
       await refreshStatus();
@@ -117,6 +136,7 @@ export function useBench() {
     status,
     loading,
     running,
+    busy: Boolean(status?.busy || status?.running || running),
     passState,
     cycles,
     error,

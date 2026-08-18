@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 `default_nettype none
 
 module tiny_gpu_top (

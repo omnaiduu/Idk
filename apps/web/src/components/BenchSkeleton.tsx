@@ -19,8 +19,8 @@ export function BenchSkeleton() {
         <div className="min-w-0 flex-1 p-3">
           <Skeleton className="h-full w-full rounded-md" />
         </div>
-        <div className="w-[280px] space-y-4 border-l border-cream-border p-3">
-          <Skeleton className="mx-auto aspect-square w-[256px] rounded-md" />
+        <div className="w-[280px] space-y-4 border-l border-cream-border p-2">
+          <Skeleton className="mx-auto h-64 w-64 rounded-sm" />
           <Skeleton className="h-8 w-full" />
         </div>
       </div>

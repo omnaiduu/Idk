@@ -204,6 +204,7 @@ export default function App() {
           cycles={bench.cycles}
           passState={bench.passState}
           running={bench.running}
+          busy={bench.busy}
           onRun={handleRun}
           onStep={handleStep}
           onReset={handleReset}

@@ -1,13 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { getMotionDuration } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Cpu, Monitor, Play } from "lucide-react";
@@ -52,40 +44,46 @@ export function OnboardingOverlay({ open, onComplete }: OnboardingOverlayProps) 
     else setStep((s) => s + 1);
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && finish()}>
-      <DialogContent className="border-cream-border-strong bg-void-elevated sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Welcome to the bench</DialogTitle>
-          <DialogDescription>
-            Step {step + 1} of {STEPS.length} — you can Run anytime.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-start p-6">
+      <aside
+        className="pointer-events-auto w-[360px] rounded-lg border border-cream-border-strong bg-void-elevated p-4 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="onboard-title"
+      >
+        <p className="text-[10px] uppercase tracking-widest text-cream-muted">
+          Step {step + 1} of {STEPS.length} · Run is free whenever you want
+        </p>
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={reduced ? false : { opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduced ? undefined : { opacity: 0, x: -12 }}
+            initial={reduced ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? undefined : { opacity: 0, y: -8 }}
             transition={{ duration: getMotionDuration(reduced, 0.2) }}
-            className="space-y-3 py-2"
+            className="mt-3 space-y-2"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-ember/40 bg-ember/10">
-              <Icon className="h-5 w-5 text-ember" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-sm border border-ember/40 bg-ember/10">
+              <Icon className="h-4 w-4 text-ember" />
             </div>
-            <h3 className="text-base font-medium text-cream">{current.title}</h3>
+            <h2 id="onboard-title" className="text-sm font-medium text-cream">
+              {current.title}
+            </h2>
             <p className="text-sm leading-relaxed text-cream-muted">{current.body}</p>
           </motion.div>
         </AnimatePresence>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={finish}>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={finish}>
             Skip
           </Button>
-          <Button variant="ember" onClick={next}>
-            {step >= STEPS.length - 1 ? "Start benching" : "Next"}
+          <Button variant="ember" size="sm" onClick={next}>
+            {step >= STEPS.length - 1 ? "Got it" : "Next"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </aside>
+    </div>
   );
 }

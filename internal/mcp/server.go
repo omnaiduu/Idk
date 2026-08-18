@@ -9,12 +9,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"tiny-gpu-bench/internal/bench"
+	"tiny-gpu-bench/internal/origin"
 )
-
-var allowedOrigins = map[string]bool{
-	"http://127.0.0.1:8741": true,
-	"http://localhost:8741": true,
-}
 
 // Server exposes MCP tools backed by the shared bench service.
 type Server struct {
@@ -42,8 +38,8 @@ func (s *Server) Handler() http.Handler {
 
 func originMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" && !allowedOrigins[origin] {
+		reqOrigin := r.Header.Get("Origin")
+		if reqOrigin != "" && !origin.Allow(reqOrigin) {
 			http.Error(w, "origin not allowed", http.StatusForbidden)
 			return
 		}

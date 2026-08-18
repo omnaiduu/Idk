@@ -23,7 +23,7 @@ export function RightRail({
   onButtonToggle,
 }: RightRailProps) {
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-cream-border bg-void-panel p-3">
+    <aside className="flex w-[280px] shrink-0 flex-col gap-4 overflow-y-auto overflow-x-hidden border-l border-cream-border bg-void-panel p-2">
       <PixelDisplay refreshKey={refreshKey} empty={!hasRun} />
       <Separator />
       <LedPanel leds={leds} />

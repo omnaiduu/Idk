@@ -111,7 +111,14 @@ func (b *Bench) toSimResult(r *sim.Result, err error) SimulateResult {
 		if err.Error() == "busy" {
 			return SimulateResult{OK: false, Error: "busy", Message: "another job is running"}
 		}
-		return SimulateResult{OK: false, Error: err.Error(), Log: r.Log}
+		log := ""
+		if r != nil {
+			log = r.Log
+		}
+		return SimulateResult{OK: false, Error: err.Error(), Log: log}
+	}
+	if r == nil {
+		return SimulateResult{OK: false, Error: "internal error"}
 	}
 	res := SimulateResult{OK: true, Cycles: r.Cycles, Message: r.Message, Log: r.Log}
 	if r.Pass != nil {
@@ -120,7 +127,7 @@ func (b *Bench) toSimResult(r *sim.Result, err error) SimulateResult {
 	return res
 }
 
-// Simulate runs reset + up to 2M cycles.
+// Simulate runs reset + up to 5M cycles (halts earlier on ebreak).
 func (b *Bench) Simulate(ctx context.Context) SimulateResult {
 	if err := b.beginJob(); err != nil {
 		return SimulateResult{OK: false, Error: "busy", Message: "another job is running"}
@@ -132,24 +139,31 @@ func (b *Bench) Simulate(ctx context.Context) SimulateResult {
 
 // Step advances one clock cycle.
 func (b *Bench) Step(ctx context.Context) SimulateResult {
-	if b.IsBusy() {
+	if err := b.beginJob(); err != nil {
 		return SimulateResult{OK: false, Error: "busy", Message: "another job is running"}
 	}
+	defer b.endJob()
 	r, err := b.runner.Step(ctx)
 	return b.toSimResult(r, err)
 }
 
 // Reset resets the live simulator.
 func (b *Bench) Reset(ctx context.Context) SimulateResult {
-	if b.IsBusy() {
+	if err := b.beginJob(); err != nil {
 		return SimulateResult{OK: false, Error: "busy", Message: "another job is running"}
 	}
+	defer b.endJob()
 	r, err := b.runner.Reset(ctx)
 	return b.toSimResult(r, err)
 }
 
-// SetButton drives the virtual button.
+// SetButton drives the virtual button. Does not take the job lock so it can
+// be pressed during a live step session; Simulate holds the lock for the full run.
 func (b *Bench) SetButton(down bool) error {
+	if b.IsBusy() && b.runner.State().Running {
+		// Mid-simulate stdin is owned by the run command; skip rather than race.
+		return fmt.Errorf("busy — wait until Run finishes, then use Step to poke the button")
+	}
 	return b.runner.SetButton(down)
 }
 
@@ -177,18 +191,19 @@ func (b *Bench) ExportFPGA(ctx context.Context) ([]byte, string, error) {
 
 // LoadTemplate loads a template into the workspace.
 func (b *Bench) LoadTemplate(name string) error {
-	if b.IsBusy() {
+	if err := b.beginJob(); err != nil {
 		return fmt.Errorf("busy")
 	}
+	defer b.endJob()
 	return b.ws.LoadTemplate(name)
 }
 
 // Dump accessors
-func (b *Bench) UART() string              { return b.runner.State().UART }
-func (b *Bench) LEDs() int                 { return b.runner.State().LEDs }
-func (b *Bench) Servos() [4]int            { return b.runner.State().Servos }
-func (b *Bench) Waves() sim.Waves          { return b.runner.State().Waves }
-func (b *Bench) Framebuffer() []byte       { return b.runner.State().Framebuffer }
+func (b *Bench) UART() string        { return b.runner.State().UART }
+func (b *Bench) LEDs() int           { return b.runner.State().LEDs }
+func (b *Bench) Servos() [4]int      { return b.runner.State().Servos }
+func (b *Bench) Waves() sim.Waves    { return b.runner.State().Waves }
+func (b *Bench) Framebuffer() []byte { return b.runner.State().Framebuffer }
 
 // RecordMCPTool updates MCP drawer state.
 func (b *Bench) RecordMCPTool(tool string, pass *bool) { b.recordMCP(tool, pass) }
