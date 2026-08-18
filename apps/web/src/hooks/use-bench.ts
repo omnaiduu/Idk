@@ -22,6 +22,7 @@ export function useBench() {
         setMcpState({
           tool: s.last_mcp_tool,
           pass: s.last_mcp_pass ?? null,
+          outcome: s.outcome,
           timestamp: Date.now(),
         });
       }
@@ -40,7 +41,8 @@ export function useBench() {
         setPassState("idle");
         return;
       }
-      if (s.pass === true) setPassState("pass");
+      if (s.outcome === "ran") setPassState("ran");
+      else if (s.pass === true) setPassState("pass");
       else if (s.pass === false) setPassState("fail");
       else setPassState("idle");
     } catch {
@@ -78,7 +80,9 @@ export function useBench() {
     try {
       const result = await api.simulate();
       setCycles(result.cycles ?? 0);
-      if (result.pass === true) {
+      if (result.outcome === "ran") {
+        setPassState("ran");
+      } else if (result.pass === true) {
         setPassState("pass");
       } else if (result.pass === false) {
         setPassState("fail");
@@ -89,7 +93,7 @@ export function useBench() {
           log: result.log,
         });
       } else {
-        setPassState(result.ok ? "pass" : "fail");
+        setPassState(result.ok ? "ran" : "fail");
       }
       await refreshStatus();
       return result;

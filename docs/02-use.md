@@ -28,13 +28,17 @@ After the sim finishes (~tens of seconds on first run):
 | **Reset** | Reset simulation state |
 | **How big?** | Yosys gate count dialog |
 | **Export FPGA** | Download `.bin` for iCE40 hx8k or show error |
-| **MCP drawer** | Last MCP tool call and PASS/FAIL (not a chat) |
+| **MCP drawer** | Last MCP tool call and PASS/RAN/FAIL (not a chat) |
 
 Toggle the **button** input in the right rail; the BTN register at `0x1000_0004` reflects it.
 
-## PASS and FAIL
+## PASS, RAN, and FAIL
 
-PASS is numeric: `templates/hello-gpu/expected.json` checks UART substring, final LEDs, PWM duties, framebuffer SHA256, and CPU halt. If you break `main.c` (e.g. delete a semicolon), Run shows **FAIL**, an error slide-over with the full log, and **Copy** — no browser `alert`.
+**PASS** is the hello-gpu demo contract in `templates/hello-gpu/expected.json`: UART contains `hello from tiny-gpu`, final LEDs, PWM duties, framebuffer SHA256, and CPU halt.
+
+**RAN** means your firmware halted and the sim finished, but it did not match that demo checklist — this is the normal result for **custom code**. UART, LEDs, servos, and the screen still show what *your* program did. It is not a crash, and the error slide-over does not open.
+
+**FAIL** is for when the machine did not run: compile error, timeout, or the CPU never halted. Breaking `main.c` (e.g. delete a semicolon) still shows **FAIL**, an error slide-over with the full log, and **Copy** — no browser `alert`.
 
 ## Cursor MCP
 

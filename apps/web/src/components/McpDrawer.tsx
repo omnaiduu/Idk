@@ -17,9 +17,21 @@ interface McpDrawerProps {
 
 export function McpDrawer({ open, onOpenChange, state }: McpDrawerProps) {
   const passVariant =
-    state?.pass === true ? "pass" : state?.pass === false ? "fail" : "idle";
+    state?.pass === true
+      ? "pass"
+      : state?.pass === false
+        ? "fail"
+        : state?.outcome === "ran"
+          ? "ran"
+          : "idle";
   const passLabel =
-    state?.pass === true ? "PASS" : state?.pass === false ? "FAIL" : "—";
+    state?.pass === true
+      ? "PASS"
+      : state?.pass === false
+        ? "FAIL"
+        : state?.outcome === "ran"
+          ? "RAN"
+          : "—";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

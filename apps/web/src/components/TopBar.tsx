@@ -57,18 +57,22 @@ export function TopBar({
       ? "pass"
       : passState === "fail"
         ? "fail"
-        : passState === "running"
-          ? "running"
-          : "idle";
+        : passState === "ran"
+          ? "ran"
+          : passState === "running"
+            ? "running"
+            : "idle";
 
   const badgeLabel =
     passState === "pass"
       ? "PASS"
       : passState === "fail"
         ? "FAIL"
-        : passState === "running"
-          ? "RUN"
-          : "—";
+        : passState === "ran"
+          ? "RAN"
+          : passState === "running"
+            ? "RUN"
+            : "—";
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-cream-border bg-void px-4">

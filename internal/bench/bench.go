@@ -16,6 +16,7 @@ type Status struct {
 	OK          bool   `json:"ok"`
 	Cycles      int64  `json:"cycles"`
 	Pass        *bool  `json:"pass"`
+	Outcome     string `json:"outcome,omitempty"`
 	Running     bool   `json:"running"`
 	Busy        bool   `json:"busy,omitempty"`
 	Message     string `json:"message,omitempty"`
@@ -27,6 +28,7 @@ type Status struct {
 type SimulateResult struct {
 	OK      bool   `json:"ok"`
 	Pass    *bool  `json:"pass,omitempty"`
+	Outcome string `json:"outcome,omitempty"`
 	Cycles  int64  `json:"cycles,omitempty"`
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
@@ -91,6 +93,7 @@ func (b *Bench) Status() Status {
 		OK:          true,
 		Cycles:      st.Cycles,
 		Pass:        st.Pass,
+		Outcome:     st.Outcome,
 		Running:     st.Running,
 		Busy:        b.jobRunning,
 		Message:     st.Message,
@@ -120,7 +123,7 @@ func (b *Bench) toSimResult(r *sim.Result, err error) SimulateResult {
 	if r == nil {
 		return SimulateResult{OK: false, Error: "internal error"}
 	}
-	res := SimulateResult{OK: true, Cycles: r.Cycles, Message: r.Message, Log: r.Log}
+	res := SimulateResult{OK: true, Cycles: r.Cycles, Outcome: r.Outcome, Message: r.Message, Log: r.Log}
 	if r.Pass != nil {
 		res.Pass = r.Pass
 	}

@@ -38,6 +38,7 @@ type Waves struct {
 type State struct {
 	Cycles      int64
 	Pass        *bool
+	Outcome     string
 	Running     bool
 	Message     string
 	UART        string
@@ -51,6 +52,7 @@ type State struct {
 type Result struct {
 	Cycles  int64
 	Pass    *bool
+	Outcome string
 	Message string
 	Log     string
 }
@@ -94,6 +96,7 @@ func (r *Runner) setRunning(v bool) {
 	r.state.Running = v
 	if v {
 		r.state.Pass = nil
+		r.state.Outcome = ""
 		r.state.Message = "running…"
 	}
 	r.mu.Unlock()
@@ -136,13 +139,14 @@ func (r *Runner) Simulate(ctx context.Context) (*Result, error) {
 		r.failState(err.Error())
 		return &Result{Log: logBuf}, err
 	}
-	pass, msg, perr := r.checkPass(snap.Halted)
+	pass, outcome, msg, perr := r.checkPass(snap.Halted)
 	st := r.State()
 	st.Cycles = snap.Cycles
 	st.Pass = pass
+	st.Outcome = outcome
 	st.Message = msg
 	r.updateState(st)
-	res := &Result{Cycles: snap.Cycles, Pass: pass, Message: msg, Log: logBuf}
+	res := &Result{Cycles: snap.Cycles, Pass: pass, Outcome: outcome, Message: msg, Log: logBuf}
 	if perr != nil {
 		res.Message = perr.Error()
 	}
@@ -153,6 +157,7 @@ func (r *Runner) failState(msg string) {
 	st := r.State()
 	pass := false
 	st.Pass = &pass
+	st.Outcome = OutcomeFail
 	st.Message = msg
 	st.Running = false
 	r.updateState(st)
@@ -193,6 +198,7 @@ func (r *Runner) Reset(ctx context.Context) (*Result, error) {
 	st := r.State()
 	st.Cycles = snap.Cycles
 	st.Pass = nil
+	st.Outcome = ""
 	st.Message = ""
 	st.UART = ""
 	st.LEDs = 0
@@ -496,17 +502,17 @@ func (r *Runner) loadDumps() error {
 	return nil
 }
 
-func (r *Runner) checkPass(halted bool) (*bool, string, error) {
+func (r *Runner) checkPass(halted bool) (*bool, string, string, error) {
 	expPath := filepath.Join(r.templates, "hello-gpu", "expected.json")
 	b, err := os.ReadFile(expPath)
 	if err != nil {
 		pass := false
-		return &pass, "missing expected.json", err
+		return &pass, OutcomeFail, "missing expected.json", err
 	}
 	var exp Expected
 	if err := json.Unmarshal(b, &exp); err != nil {
 		pass := false
-		return &pass, "invalid expected.json", err
+		return &pass, OutcomeFail, "invalid expected.json", err
 	}
 	st := r.State()
 	if uartBytes, err := os.ReadFile(filepath.Join(r.ws.DumpsDir(), "uart.log")); err == nil {
@@ -531,8 +537,8 @@ func (r *Runner) checkPass(halted bool) (*bool, string, error) {
 	if fb, err := os.ReadFile(filepath.Join(r.ws.DumpsDir(), "fb.bin")); err == nil {
 		st.Framebuffer = fb
 	}
-	ok, msg := EvaluateExpected(exp, st.UART, st.LEDs, st.Servos, st.Framebuffer, halted)
-	return &ok, msg, nil
+	ok, outcome, msg := ScoreRun(exp, st.UART, st.LEDs, st.Servos, st.Framebuffer, halted)
+	return ok, outcome, msg, nil
 }
 
 var statCells = regexp.MustCompile(`Number of cells:\s+(\d+)`)

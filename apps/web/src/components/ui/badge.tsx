@@ -10,6 +10,7 @@ const badgeVariants = cva(
         default: "border-cream-border bg-cream/5 text-cream-muted",
         pass: "border-ember/50 bg-ember/10 text-ember glow-ember",
         fail: "border-cream-border-strong bg-cream/5 text-cream",
+        ran: "border-cream-border-strong bg-cream/10 text-cream",
         running: "border-ember/40 bg-ember/10 text-ember",
         idle: "border-cream-border bg-transparent text-cream-muted",
       },
