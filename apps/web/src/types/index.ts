@@ -60,6 +60,7 @@ export interface FileContent {
 
 export interface ApiError {
   error: string;
+  title?: string;
   message?: string;
   log?: string;
   status?: number;

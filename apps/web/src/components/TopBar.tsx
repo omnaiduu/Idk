@@ -50,7 +50,8 @@ export function TopBar({
   onExportFpga,
   onOpenMcp,
 }: TopBarProps) {
-  const locked = running || busy;
+  const locked = running || Boolean(busy);
+  const simulating = passState === "running";
   const badgeVariant =
     passState === "pass"
       ? "pass"
@@ -90,11 +91,17 @@ export function TopBar({
       <div className="ml-auto flex items-center gap-1.5">
         <ActionTip
           disabled={locked}
-          label={locked ? "Running the fake chip…" : "Reset + simulate until halt (cap 5M cycles)"}
+          label={
+            simulating
+              ? "Running the fake chip…"
+              : locked
+                ? "Bench is busy"
+                : "Reset + simulate until halt (cap 5M cycles)"
+          }
         >
-          <Button variant="ember" size="sm" onClick={onRun} disabled={locked}>
+          <Button variant="ember" size="sm" onClick={onRun} disabled={locked} aria-label="Run simulation">
             <Play className="h-3.5 w-3.5 fill-current" />
-            {locked ? "Running the fake chip…" : "Run"}
+            {simulating ? "Running the fake chip…" : "Run"}
           </Button>
         </ActionTip>
 

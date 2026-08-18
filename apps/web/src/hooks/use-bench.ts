@@ -25,9 +25,13 @@ export function useBench() {
           timestamp: Date.now(),
         });
       }
-      if (s.running || s.busy) {
+      if (s.running) {
         sawRun.current = true;
         setPassState("running");
+        setRunning(true);
+        return;
+      }
+      if (s.busy) {
         setRunning(true);
         return;
       }
@@ -79,6 +83,7 @@ export function useBench() {
       } else if (result.pass === false) {
         setPassState("fail");
         setError({
+          title: "Simulation failed",
           error: result.error ?? "Simulation failed",
           message: result.message,
           log: result.log,
@@ -91,10 +96,12 @@ export function useBench() {
     } catch (e) {
       const err = e as ApiError;
       if (err.status === 409) {
+        err.title = "Bench busy";
         setError(err);
         await refreshStatus();
         throw err;
       }
+      err.title = err.title ?? "Simulation failed";
       setPassState("fail");
       setError(err);
       throw err;

@@ -184,7 +184,9 @@ export default function App() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      bench.setError(e as ApiError);
+      const err = e as ApiError;
+      err.title = "FPGA export failed";
+      bench.setError(err);
     }
   }, [saveIfDirty, bench]);
 

@@ -49,7 +49,7 @@ export function ErrorSlideOver({ error, onDismiss }: ErrorSlideOverProps) {
             <div className="flex shrink-0 items-center justify-between border-b border-cream-border px-4 py-3">
               <div>
                 <h2 id="error-title" className="text-sm font-semibold text-cream">
-                  {busy ? "Bench busy" : "Simulation error"}
+                  {busy ? "Bench busy" : error.title ?? "Error"}
                 </h2>
                 <p className="text-xs text-cream-muted">
                   {busy ? "Wait for the current run to finish." : error.error}
