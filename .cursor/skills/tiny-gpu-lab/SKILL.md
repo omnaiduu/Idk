@@ -55,15 +55,16 @@ get_servos
 
 Keep `hdl/` alone unless the user asked to change the machine.
 
-**PASS vs FAIL today:** `expected.json` is the **hello-gpu checklist**. Custom firmware that **halts and dumps UART/LEDs** still **FAIL**s that checklist (wrong string, LEDs, PWM, fb hash). That FAIL is not a crash.
+**PASS / RAN / FAIL:** `expected.json` is the **hello-gpu checklist**. Matching it is **PASS**. Custom firmware that **halts** is **RAN** (UART/LEDs/screen are yours). **FAIL** is compile error, timeout, or the CPU never halted — not “wrong UART string.”
 
 Judge custom code by:
 
-- `ok: true` and a halt (tens of thousands of cycles if you skip long `delay()`)
+- `ok: true` and `outcome: "ran"` (or `"pass"` for hello-gpu)
+- A halt (tens of thousands of cycles if you skip long `delay()`)
 - UART / LEDs / PWM / framebuffer matching **what you wrote**
-- FAIL **log/message** — compile errors vs “uart missing expected text”
+- Message `RAN: …` means the demo checklist differed — not a crash
 
-Compile error / timeout / never-halted → real failure. Golden mismatch after a clean halt → the program ran.
+Compile error / timeout / never-halted → **FAIL**. Golden mismatch after a clean halt → **RAN**.
 
 When done on a **shared** bench, restore: `load_template { "template": "hello-gpu" }`.
 
@@ -136,7 +137,7 @@ GPU CMD word: `[31:28]` op `1` CLEAR (color `[7:0]`), `2` SET_COLOR, `3` PUT_PIX
 - **Status first.** Never parallel `simulate` + `simulate`.
 - **Write the whole `main.c`.** Partial edits via MCP are error-prone.
 - **C before Verilog.** Students’ “blink / print / draw” tasks are firmware.
-- **Prove it with dumps**, not the PASS pill alone.
+- **Prove it with dumps.** Custom success is **RAN**, not the hello-gpu PASS pill.
 - **Short programs.** No chaser delays unless demonstrating LEDs over time.
 - **Restore the template** on a shared Lab2 when the user is done.
 - **Don’t mock PASS.** If simulate failed to build, say so and paste the log.
@@ -148,7 +149,7 @@ GPU CMD word: `[31:28]` op `1` CLEAR (color `[7:0]`), `2` SET_COLOR, `3` PUT_PIX
 ## Exercises (run these when asked to “try the lab”)
 
 1. **Hello** — `load_template` + `simulate`. Confirm UART hello, LEDs 170, PWM 32/96/160/224, PASS.
-2. **Custom hello** — `write_file` a tiny `main.c` that `uart_puts` a unique string and sets `LEDS = 0x55`. `simulate`. Confirm UART/LEDs. Expect checklist FAIL; report that the program ran.
+2. **Custom hello** — `write_file` a tiny `main.c` that `uart_puts` a unique string and sets `LEDS = 0x55`. `simulate`. Confirm UART/LEDs. Expect **RAN**, not FAIL.
 3. **Rectangle** — `gpu_clear` + `gpu_fill_rect`. `get_framebuffer` non-empty / not the hello-gpu hash.
 4. **Hang** — explain (don’t ship) that `while(1);` will FAIL/timeout. Always `return 0` from `main`.
 5. **Restore** — `load_template` `hello-gpu` again.
