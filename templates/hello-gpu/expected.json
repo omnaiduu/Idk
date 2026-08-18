@@ -1,0 +1,8 @@
+{
+  "uart_contains": "hello from tiny-gpu",
+  "leds_nonzero": true,
+  "leds_final": 170,
+  "pwm_duty": [32, 96, 160, 224],
+  "fb_sha256": "d83705b8cf0048566015d38024d6435d222386cd04eecbd456d518252fe77655",
+  "halted": true
+}

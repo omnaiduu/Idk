@@ -1,0 +1,10 @@
+# Firmware build flags — must match scripts/dev-sim.sh and sim/Makefile
+
+riscv64-unknown-elf-gcc \
+  -march=rv32i -mabi=ilp32 \
+  -nostdlib -nostartfiles -ffreestanding -fno-builtin -Os \
+  -T firmware/link.ld -I firmware \
+  firmware/start.S templates/hello-gpu/main.c \
+  -o firmware.elf
+
+riscv64-unknown-elf-objcopy -O verilog firmware.elf firmware.hex

@@ -1,0 +1,9 @@
+/build/
+/sim/obj_dir/
+/workspace-data/
+*.elf
+*.hex
+*.o
+*.a
+*.d
+qa_recording_*.mp4

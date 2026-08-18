@@ -1,0 +1,18 @@
+services:
+  bench:
+    build: .
+    ports:
+      - "127.0.0.1:8741:8741"
+    mem_limit: 4g
+    cpus: 2.0
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8741"
+      WEB_ROOT: "/app/web"
+      WORKSPACE: "/data/workspace"
+      SIM_TIMEOUT_SEC: "120"
+    volumes:
+      - bench-workspace:/data/workspace
+
+volumes:
+  bench-workspace:
