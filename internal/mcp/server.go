@@ -32,7 +32,10 @@ func (s *Server) Handler() http.Handler {
 	registerTools(mcpServer, s)
 	base := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		return mcpServer
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{
+		// ngrok Host is not loopback; SDK would 403 otherwise. Default is still protected.
+		DisableLocalhostProtection: origin.TunnelEnabled(),
+	})
 	return originMiddleware(base)
 }
 
